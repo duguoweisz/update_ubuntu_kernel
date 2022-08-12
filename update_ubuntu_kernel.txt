@@ -1,0 +1,66 @@
+实验步骤（在root权限下进行）
+1.内核编译前的准备工作
+sudo  apt-get install build-essential kernel-package   libncurses5-dev libssl-dev bison flex
+2.下载内核
+下载地址：git://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git
+1）查看虚拟机Ubantu20.04内核版本：
+uname -a  //ubantu内核版本为5.8.0-48
+2）将Linux5.8.1压缩包移动到用户目录的源目录，即/usr/src目录下，并进行解压
+sudo mv /home/zzu/tools/linux-5.8.1.tar.xz /usr/src
+cd /usr/src
+sudo tar -xvJf ./linux-5.8.1.tar.xz(bzip2 -j)
+3.配置编译的相关文件及环境
+sudo make mrproper
+cp /boot/config-5.8.0-48-generic ./.config
+cd /usr/src/linux-5.8.1
+make menuconfig
+CONFIG_DEBUG_INFO_BTF关闭
+CONFIG_SYSTEMTRUSTED_KEYS后面的引号中的内容删掉
+4. 编译新内核
+make -j4
+5. 内核安装
+sudo make modules_install
+sudo make install
+---------------------------------------------------------------------------------------------------------
+以下步骤是手动进行，实际以上几步已经升级好内核了。
+重启设备后，用的就是最新的内核。
+通过uname -r可以看到当前使用的是最新内核。
+$ uname -r 
+5.19.0-rc3+
+通过lsb_release这个python脚本可以看ubuntu的版本
+$ lsb_release -a
+No LSB modules are available.
+Distributor ID:	Ubuntu
+Description:	Ubuntu 18.04.6 LTS
+Release:	18.04
+Codename:	bionic
+
+---------------------------------------------------------------------------------------------------------
+cp arch/x86/boot/bzImage /boot/vmlinuz-5.8.1  
+cp /usr/src/linux-5.8.1/System.map /boot/System.map-5.8.1
+cp /usr/src/linux-5.8.1/.config /boot/config-5.8.1
+6. 安装模块
+sudo make modules_install
+sudo make install
+7. 生成initrd.img文件---make install 会自动生成initramfs
+cd /lib/modules/5.8.1
+update-initramfs –c –k 5.8.1
+8.切换到/boot/grub/目录下，自动查找新内核，并添加至grub引导---make install 会自动更新grub
+cd /boot/grub
+update-grub
+9. 重启Ubantu，在previous version中选择启动新编译的内核
+重启时，长按shift，可进入GRUB，选择Advanced options for ubantu,启动新编译的内核（5.8.1）
+10.重启后执行命令：
+uname –a
+---------------------------------------------------------------------------------------------------------
+相关F2FS调试笔记：
+include/config/kernel.release:1:5.19.0-rc3+
+include/generated/utsrelease.h:1:#define UTS_RELEASE "5.19.0-rc3+"
+
+mkfs.f2fs -l mydevice mydevice.img
+
+sudo insmod /lib/modules/5.19.0-rc3+/kernel/fs/f2fs/f2fs.ko
+cat /proc/filesystems
+sudo mount -t f2fs /home/mi/source/my_temp/duguowei.img /mnt/test -o loop
+df;mount | grep f2fs
+dump.f2fs -d 1 /home/mi/source/my_temp/duguowei.img
